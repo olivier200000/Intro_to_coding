@@ -1,2 +1,2 @@
-# Intro_to_coding
-coding with olivier
+# Intro_to_web_development
+code with olivier
