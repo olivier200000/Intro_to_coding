@@ -39,20 +39,33 @@ st.subheader("📊 Inventory Records")
 st.dataframe(st.session_state.inventory, use_container_width=True)
 
 # --- Calculate Remaining Stock ---
-remaining_stock = st.session_state.inventory.groupby(["Item", "Type"])["Quantity"].sum().unstack(fill_value=0)
-remaining_stock["Remaining"] = remaining_stock.get("Bought", 0) - remaining_stock.get("Sold", 0)
-remaining_stock = remaining_stock.reset_index()
+if not st.session_state.inventory.empty:
+    remaining_stock = (
+        st.session_state.inventory
+        .groupby(["Item", "Type"])["Quantity"]
+        .sum()
+        .unstack(fill_value=0)
+        .reset_index()
+    )
 
-st.subheader("📦 Stock Summary")
-st.dataframe(remaining_stock[["Item", "Bought", "Sold", "Remaining"]], use_container_width=True)
+    # Make sure both 'Bought' and 'Sold' columns exist
+    if "Bought" not in remaining_stock:
+        remaining_stock["Bought"] = 0
+    if "Sold" not in remaining_stock:
+        remaining_stock["Sold"] = 0
 
-# --- Recommendation Section ---
-st.subheader("🧠 Recommendations")
-low_stock = remaining_stock[remaining_stock["Remaining"] <= 5]
+    remaining_stock["Remaining"] = remaining_stock["Bought"] - remaining_stock["Sold"]
 
-if not low_stock.empty:
-    for _, row in low_stock.iterrows():
-        st.warning(f"🔔 Consider restocking: **{row['Item']}** (Remaining: {int(row['Remaining'])})")
+    st.subheader("📦 Stock Summary")
+    st.dataframe(remaining_stock[["Item", "Bought", "Sold", "Remaining"]], use_container_width=True)
+
+    # Recommendations
+    st.subheader("🧠 Recommendations")
+    low_stock = remaining_stock[remaining_stock["Remaining"] <= 5]
+    if not low_stock.empty:
+        for _, row in low_stock.iterrows():
+            st.warning(f"🔔 Consider restocking: **{row['Item']}** (Remaining: {int(row['Remaining'])})")
+    else:
+        st.success("✅ All items are sufficiently stocked.")
 else:
-    st.success("✅ All items are sufficiently stocked.")
-
+    st.info("⚠️ No inventory data available yet. Please upload a file or enter stock manually.")
